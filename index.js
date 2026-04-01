@@ -18,40 +18,34 @@ async function pollGitHub() {
     ReleaseEvent: {
       emoji: "🚀",
       getEvent: () => "Release published",
-      text: (e) => {
-        const version = e.payload.release?.tag_name || "a new version";
-        return `${version} of ${e.repo.name} by ${e.actor.login}`;
-      },
+      text: (e) =>
+        `${e.payload.release?.tag_name || "a new version"} of ${e.repo.name} by ${e.actor.login}`,
     },
 
     PullRequestEvent: {
       emoji: "🔀",
       getEvent: (e) => {
-        const action = e.payload.action;
+        const a = e.payload.action;
         const pr = e.payload.pull_request;
-        if (action === "closed" && pr?.merged) return "Pull request merged";
-        if (action === "closed") return "Pull request closed";
-        if (action === "reopened") return "Pull request reopened";
+        if (a === "closed" && pr?.merged) return "Pull request merged";
+        if (a === "closed") return "Pull request closed";
+        if (a === "reopened") return "Pull request reopened";
         return "Pull request opened";
       },
-      text: (e) => {
-        const pr = e.payload.pull_request;
-        return `#${pr?.number} in ${e.repo.name} by ${e.actor.login}`;
-      },
+      text: (e) =>
+        `#${e.payload.pull_request?.number} in ${e.repo.name} by ${e.actor.login}`,
     },
 
     IssuesEvent: {
       emoji: "🐛",
       getEvent: (e) => {
-        const action = e.payload.action;
-        if (action === "closed") return "Issue closed";
-        if (action === "reopened") return "Issue reopened";
+        const a = e.payload.action;
+        if (a === "closed") return "Issue closed";
+        if (a === "reopened") return "Issue reopened";
         return "Issue opened";
       },
-      text: (e) => {
-        const issue = e.payload.issue;
-        return `#${issue?.number} in ${e.repo.name} by ${e.actor.login}`;
-      },
+      text: (e) =>
+        `#${e.payload.issue?.number} in ${e.repo.name} by ${e.actor.login}`,
     },
 
     PushEvent: {
@@ -66,14 +60,54 @@ async function pollGitHub() {
 
     CreateEvent: {
       emoji: "🌱",
-      getEvent: (e) => {
-        const type = e.payload.ref_type; // branch or tag
-        return type === "tag" ? "Tag created" : "Branch created";
-      },
-      text: (e) => {
-        const ref = e.payload.ref;
-        return `“${ref}” in ${e.repo.name} by ${e.actor.login}`;
-      },
+      getEvent: (e) =>
+        e.payload.ref_type === "tag" ? "Tag created" : "Branch created",
+      text: (e) => `“${e.payload.ref}” in ${e.repo.name} by ${e.actor.login}`,
+    },
+
+    DeleteEvent: {
+      emoji: "🗑️",
+      getEvent: (e) =>
+        e.payload.ref_type === "tag" ? "Tag deleted" : "Branch deleted",
+      text: (e) => `“${e.payload.ref}” in ${e.repo.name} by ${e.actor.login}`,
+    },
+
+    ForkEvent: {
+      emoji: "🍴",
+      getEvent: () => "Repository forked",
+      text: (e) => `${e.repo.name} was forked by ${e.actor.login}`,
+    },
+
+    WatchEvent: {
+      emoji: "⭐",
+      getEvent: () => "Repository starred",
+      text: (e) => `${e.repo.name} starred by ${e.actor.login}`,
+    },
+
+    PullRequestReviewEvent: {
+      emoji: "👀",
+      getEvent: () => "Pull request reviewed",
+      text: (e) =>
+        `#${e.payload.pull_request?.number} reviewed in ${e.repo.name} by ${e.actor.login}`,
+    },
+
+    DiscussionEvent: {
+      emoji: "💬",
+      getEvent: () => "Discussion started",
+      text: (e) =>
+        `${e.payload.discussion?.title || "new discussion"} in ${e.repo.name}`,
+    },
+
+    MemberEvent: {
+      emoji: "👤",
+      getEvent: () => "Collaborator added",
+      text: (e) => `${e.payload.member?.login} added to ${e.repo.name}`,
+    },
+
+    PublicEvent: {
+      emoji: "🌍",
+      getEvent: () => "Repository made public",
+      text: (e) => `${e.repo.name} is now public`,
     },
   };
 
