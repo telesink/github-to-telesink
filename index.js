@@ -17,48 +17,62 @@ async function pollGitHub() {
   const EVENT_MAP = {
     ReleaseEvent: {
       emoji: "🚀",
-      name: "release",
+      getEvent: () => "Release published",
       text: (e) => {
-        const version = e.payload.release?.tag_name || "new version";
-        return `Released ${version} of ${e.repo.name} by ${e.actor.login}`;
+        const version = e.payload.release?.tag_name || "a new version";
+        return `${version} of ${e.repo.name} by ${e.actor.login}`;
       },
     },
+
     PullRequestEvent: {
       emoji: "🔀",
-      name: "pull_request",
+      getEvent: (e) => {
+        const action = e.payload.action;
+        const pr = e.payload.pull_request;
+        if (action === "closed" && pr?.merged) return "Pull request merged";
+        if (action === "closed") return "Pull request closed";
+        if (action === "reopened") return "Pull request reopened";
+        return "Pull request opened";
+      },
       text: (e) => {
         const pr = e.payload.pull_request;
-        const action =
-          e.payload.action === "closed" && pr?.merged
-            ? "merged"
-            : e.payload.action;
-        return `PR #${pr?.number} ${action} in ${e.repo.name} by ${e.actor.login}`;
+        return `#${pr?.number} in ${e.repo.name} by ${e.actor.login}`;
       },
     },
+
     IssuesEvent: {
       emoji: "🐛",
-      name: "issue",
+      getEvent: (e) => {
+        const action = e.payload.action;
+        if (action === "closed") return "Issue closed";
+        if (action === "reopened") return "Issue reopened";
+        return "Issue opened";
+      },
       text: (e) => {
         const issue = e.payload.issue;
-        return `Issue #${issue?.number} ${e.payload.action} in ${e.repo.name} by ${e.actor.login}`;
+        return `#${issue?.number} in ${e.repo.name} by ${e.actor.login}`;
       },
     },
+
     PushEvent: {
       emoji: "📤",
-      name: "push",
+      getEvent: () => "Commits pushed",
       text: (e) => {
         const branch = e.payload.ref?.replace("refs/heads/", "") || "main";
         const count = e.payload.commits?.length || 0;
-        return `Pushed ${count} commit${count === 1 ? "" : "s"} to ${branch} in ${e.repo.name} by ${e.actor.login}`;
+        return `${count} commit${count === 1 ? "" : "s"} to ${branch} in ${e.repo.name} by ${e.actor.login}`;
       },
     },
+
     CreateEvent: {
       emoji: "🌱",
-      name: "create",
-      text: (e) => {
+      getEvent: (e) => {
         const type = e.payload.ref_type; // branch or tag
+        return type === "tag" ? "Tag created" : "Branch created";
+      },
+      text: (e) => {
         const ref = e.payload.ref;
-        return `Created ${type} ${ref} in ${e.repo.name} by ${e.actor.login}`;
+        return `“${ref}” in ${e.repo.name} by ${e.actor.login}`;
       },
     },
   };
@@ -91,8 +105,10 @@ async function pollGitHub() {
         )
           continue;
 
+        const eventTitle = map.getEvent(e);
+
         const success = await telesink.track({
-          event: `github.${map.name}`,
+          event: eventTitle,
           text: map.text(e),
           emoji: map.emoji,
           properties: {
@@ -103,7 +119,7 @@ async function pollGitHub() {
         });
 
         if (success) {
-          console.log(`✅ ${map.emoji} ${map.name} → ${e.repo.name}`);
+          console.log(`✅ ${map.emoji} ${eventTitle} → ${e.repo.name}`);
         }
       }
     } catch (err) {
@@ -114,7 +130,7 @@ async function pollGitHub() {
   }
 
   function schedule() {
-    const delay = 60000 + Math.random() * 60000;
+    const delay = 60000 + Math.random() * 60000; // 60–120 seconds
     setTimeout(poll, delay);
   }
 
