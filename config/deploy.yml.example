@@ -1,0 +1,12 @@
+service: github-to-telesink
+image: github-to-telesink
+
+servers:
+  web:
+    - telesink.example.com
+
+registry:
+  server: localhost:5555
+
+builder:
+  arch: amd64
