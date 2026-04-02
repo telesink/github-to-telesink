@@ -126,7 +126,7 @@ async function pollGitHub() {
 
   async function poll() {
     try {
-      const res = await fetch("https://api.github.com/events", {
+      const res = await fetch("https://api.github.com/events?per_page=100", {
         headers: {
           "User-Agent": "telesink-demo",
           "If-None-Match": etags["github"] || "",
@@ -150,7 +150,7 @@ async function pollGitHub() {
         if (!map) continue;
 
         const eventTitle = map.getEvent(e);
-        if (eventTitle === null) continue;
+        if (eventTitle === null) continue; // e.g. skipped branch create/delete
 
         if (
           e.type === "PushEvent" &&
@@ -174,8 +174,8 @@ async function pollGitHub() {
         }
       }
 
-      if (seen.size > 2000) {
-        const trimmed = Array.from(seen).slice(-1000);
+      if (seen.size > 5000) {
+        const trimmed = Array.from(seen).slice(-2500);
         seen.clear();
         trimmed.forEach((id) => seen.add(id));
       }
