@@ -13,6 +13,7 @@ app.listen(3000, () => {
 
 async function pollGitHub() {
   const etags = {};
+  const seen = new Set();
 
   const EVENT_MAP = {
     ReleaseEvent: {
@@ -59,16 +60,14 @@ async function pollGitHub() {
     },
 
     CreateEvent: {
-      emoji: "🌱",
-      getEvent: (e) =>
-        e.payload.ref_type === "tag" ? "Tag created" : "Branch created",
+      emoji: "🏷️",
+      getEvent: (e) => (e.payload.ref_type === "tag" ? "Tag created" : null),
       text: (e) => `“${e.payload.ref}” in ${e.repo.name} by ${e.actor.login}`,
     },
 
     DeleteEvent: {
       emoji: "🗑️",
-      getEvent: (e) =>
-        e.payload.ref_type === "tag" ? "Tag deleted" : "Branch deleted",
+      getEvent: (e) => (e.payload.ref_type === "tag" ? "Tag deleted" : null),
       text: (e) => `“${e.payload.ref}” in ${e.repo.name} by ${e.actor.login}`,
     },
 
@@ -89,6 +88,20 @@ async function pollGitHub() {
       getEvent: () => "Pull request reviewed",
       text: (e) =>
         `#${e.payload.pull_request?.number} reviewed in ${e.repo.name} by ${e.actor.login}`,
+    },
+
+    IssueCommentEvent: {
+      emoji: "💬",
+      getEvent: () => "Issue comment",
+      text: (e) =>
+        `Comment on #${e.payload.issue?.number} in ${e.repo.name} by ${e.actor.login}`,
+    },
+
+    PullRequestReviewCommentEvent: {
+      emoji: "💭",
+      getEvent: () => "Review comment",
+      text: (e) =>
+        `Comment on PR #${e.payload.pull_request?.number} in ${e.repo.name} by ${e.actor.login}`,
     },
 
     DiscussionEvent: {
@@ -130,16 +143,20 @@ async function pollGitHub() {
       const events = await res.json();
 
       for (const e of events) {
+        if (seen.has(e.id)) continue;
+        seen.add(e.id);
+
         const map = EVENT_MAP[e.type];
         if (!map) continue;
+
+        const eventTitle = map.getEvent(e);
+        if (eventTitle === null) continue;
 
         if (
           e.type === "PushEvent" &&
           (!e.payload.commits || e.payload.commits.length === 0)
         )
           continue;
-
-        const eventTitle = map.getEvent(e);
 
         const success = await telesink.track({
           event: eventTitle,
@@ -156,8 +173,14 @@ async function pollGitHub() {
           console.log(`✅ ${map.emoji} ${eventTitle} → ${e.repo.name}`);
         }
       }
+
+      if (seen.size > 2000) {
+        const trimmed = Array.from(seen).slice(-1000);
+        seen.clear();
+        trimmed.forEach((id) => seen.add(id));
+      }
     } catch (err) {
-      console.error("Poll error:", err.message);
+      console.error("GitHub poll error:", err.message);
     }
 
     schedule();
