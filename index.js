@@ -60,14 +60,16 @@ async function pollGitHub() {
     },
 
     CreateEvent: {
-      emoji: "🏷️",
-      getEvent: (e) => (e.payload.ref_type === "tag" ? "Tag created" : null),
+      emoji: "🌱",
+      getEvent: (e) =>
+        e.payload.ref_type === "tag" ? "Tag created" : "Branch created",
       text: (e) => `“${e.payload.ref}” in ${e.repo.name} by ${e.actor.login}`,
     },
 
     DeleteEvent: {
       emoji: "🗑️",
-      getEvent: (e) => (e.payload.ref_type === "tag" ? "Tag deleted" : null),
+      getEvent: (e) =>
+        e.payload.ref_type === "tag" ? "Tag deleted" : "Branch deleted",
       text: (e) => `“${e.payload.ref}” in ${e.repo.name} by ${e.actor.login}`,
     },
 
@@ -150,7 +152,6 @@ async function pollGitHub() {
         if (!map) continue;
 
         const eventTitle = map.getEvent(e);
-        if (eventTitle === null) continue; // e.g. skipped branch create/delete
 
         if (
           e.type === "PushEvent" &&
